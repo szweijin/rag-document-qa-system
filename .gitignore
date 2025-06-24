@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# Celery / Redis
+celerybeat.pid
+celeryd.pid
+
+# AI / ChromaDB
+chroma_db/
+.env
+
+# IDEs
+.idea/
+.vscode/
+
+# Operating System Files
+.DS_Store
+Thumbs.db

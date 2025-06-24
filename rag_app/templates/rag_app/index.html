@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG 智慧文件問答系統</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        form { margin-bottom: 20px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 5px; background-color: #fafafa; }
+        input[type="file"], input[type="text"], button, select {
+            width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+        }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; }
+        button:hover { background-color: #218838; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .message { padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .message.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .message.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .message.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        .document-list, .qa-list { border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+        .item { background-color: #f9f9f9; border: 1px solid #e9e9e9; border-radius: 5px; padding: 15px; margin-bottom: 10px; }
+        .item h3 { margin-top: 0; color: #007bff; }
+        .item p { margin: 5px 0; }
+        .source-doc { background-color: #e6f7ff; border-left: 5px solid #91d5ff; padding: 10px; margin-top: 10px; font-size: 0.9em; }
+        .source-doc pre { white-space: pre-wrap; word-wrap: break-word; }
+        textarea { width: calc(100% - 22px); height: 80px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; color: white; margin-left: 5px; }
+        .status-uploaded { background-color: #6c757d; } /* gray */
+        .status-processing { background-color: #ffc107; } /* yellow */
+        .status-completed { background-color: #28a745; } /* green */
+        .status-failed { background-color: #dc3545; } /* red */
+        .status-pending { background-color: #17a2b8; } /* light blue */
+        .status-answering { background-color: #007bff; } /* blue */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAG 智慧文件問答系統</h1>
+
+        <div class="message-container" id="messageContainer"></div>
+
+        <div id="file-upload-section">
+            <h2>文件上傳</h2>
+            <form id="uploadForm">
+                <input type="file" id="documentFile" accept=".pdf,.txt,.docx" required>
+                <button type="submit">上傳文件</button>
+            </form>
+        </div>
+
+        <div id="document-list-section">
+            <h2>已處理文件</h2>
+            <select id="documentSelect">
+                <option value="">請選擇一個文件...</option>
+            </select>
+            <button onclick="refreshDocuments()">刷新文件列表</button>
+            <p><small>刷新列表以查看文件處理狀態更新。</small></p>
+            <div id="documentDetails" class="item" style="display: none;">
+                <h3></h3>
+                <p><strong>狀態:</strong> <span id="docStatus"></span></p>
+                <p id="docMessage"></p>
+                <p><strong>上傳時間:</strong> <span id="docUploadedAt"></span></p>
+            </div>
+        </div>
+
+        <hr>
+
+        <div id="qa-section">
+            <h2>提出問題</h2>
+            <form id="qaForm">
+                <p>選取文件後即可提問。</p>
+                <textarea id="questionInput" placeholder="請輸入您的問題..." rows="3" required disabled></textarea>
+                <button type="submit" id="askButton" disabled>提問</button>
+            </form>
+        </div>
+
+        <div id="qa-history-section">
+            <h2>問答歷史</h2>
+            <div id="qaHistory">
+                <p>此處將顯示與所選文件相關的問答歷史。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/'; // Django REST Framework API 基礎 URL
+
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000); // 5秒後自動清除訊息
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        async function fetchDocuments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}documents/`);
+                if (!response.ok) throw new Error('無法載入文件列表');
+                const documents = await response.json();
+                const select = document.getElementById('documentSelect');
+                select.innerHTML = '<option value="">請選擇一個文件...</option>';
+                documents.forEach(doc => {
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = `${doc.filename} (${doc.status})`;
+                    select.appendChild(option);
+                });
+                return documents;
+            } catch (error) {
+                console.error('Error fetching documents:', error);
+                showMessage(`載入文件列表失敗: ${error.message}`, 'error');
+                return [];
+            }
+        }
+
+        async function fetchDocumentDetails(docId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}documents/${docId}/`);
+                if (!response.ok) throw new Error('無法載入文件詳情');
+                const doc = await response.json();
+                document.getElementById('documentDetails').style.display = 'block';
+                document.getElementById('documentDetails').querySelector('h3').textContent = doc.filename;
+                document.getElementById('docStatus').textContent = doc.status;
+                document.getElementById('docStatus').className = `status-badge status-${doc.status.toLowerCase()}`;
+                document.getElementById('docMessage').textContent = doc.processing_message || '';
+                document.getElementById('docUploadedAt').textContent = new Date(doc.uploaded_at).toLocaleString();
+
+                // 啟用/禁用提問功能
+                const questionInput = document.getElementById('questionInput');
+                const askButton = document.getElementById('askButton');
+                if (doc.status === 'COMPLETED') {
+                    questionInput.disabled = false;
+                    askButton.disabled = false;
+                    showMessage('文件處理完成，您可以提問了！', 'success');
+                } else {
+                    questionInput.disabled = true;
+                    askButton.disabled = true;
+                    if (doc.status === 'FAILED') {
+                         showMessage('文件處理失敗，請檢查日誌或重新上傳。', 'error');
+                    } else {
+                         showMessage('文件正在處理中，請稍候...', 'info');
+                    }
+                }
+                return doc;
+            } catch (error) {
+                console.error('Error fetching document details:', error);
+                showMessage(`載入文件詳情失敗: ${error.message}`, 'error');
+                document.getElementById('documentDetails').style.display = 'none';
+            }
+        }
+
+        async function fetchQAHitsory(docId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}qa/?document=${docId}`);
+                if (!response.ok) throw new Error('無法載入問答歷史');
+                const qaPairs = await response.json();
+                const qaHistoryDiv = document.getElementById('qaHistory');
+                qaHistoryDiv.innerHTML = ''; // 清空現有歷史
+
+                if (qaPairs.length === 0) {
+                    qaHistoryDiv.innerHTML = '<p>尚無問答歷史。</p>';
+                    return;
+                }
+
+                qaPairs.forEach(qa => {
+                    const qaItem = document.createElement('div');
+                    qaItem.className = 'item';
+                    qaItem.innerHTML = `
+                        <h3>Q: ${qa.question}</h3>
+                        <p><strong>狀態:</strong> <span class="status-badge status-${qa.status.toLowerCase()}">${qa.status}</span></p>
+                        <p><strong>A:</strong> ${qa.answer || '等待回答...'}</p>
+                        ${qa.source_documents ? `
+                            <h4>參考來源:</h4>
+                            ${qa.source_documents.map((source, index) => `
+                                <div class="source-doc">
+                                    <p><strong>來源 ${index + 1}:</strong></p>
+                                    <pre>${source.content}</pre>
+                                    <p><small>Metadata: ${JSON.stringify(source.metadata)}</small></p>
+                                </div>
+                            `).join('')}
+                        ` : ''}
+                        ${qa.error_message ? `<p class="message error">錯誤: ${qa.error_message}</p>` : ''}
+                        <p><small>時間: ${new Date(qa.created_at).toLocaleString()}</small></p>
+                    `;
+                    qaHistoryDiv.appendChild(qaItem);
+                });
+            } catch (error) {
+                console.error('Error fetching QA history:', error);
+                showMessage(`載入問答歷史失敗: ${error.message}`, 'error');
+            }
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('documentFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('請選擇一個文件。', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}documents/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '文件上傳失敗');
+                }
+
+                const data = await response.json();
+                showMessage(`文件 '${data.filename}' 上傳成功，正在處理中...`, 'success');
+                fileInput.value = ''; // 清空文件選擇
+                await refreshDocuments(data.id); // 刷新並選中新上傳的文件
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                showMessage(`文件上傳失敗: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('documentSelect').addEventListener('change', async (e) => {
+            const selectedDocId = e.target.value;
+            if (selectedDocId) {
+                await fetchDocumentDetails(selectedDocId);
+                await fetchQAHitsory(selectedDocId);
+            } else {
+                document.getElementById('documentDetails').style.display = 'none';
+                document.getElementById('qaHistory').innerHTML = '<p>此處將顯示與所選文件相關的問答歷史。</p>';
+                document.getElementById('questionInput').disabled = true;
+                document.getElementById('askButton').disabled = true;
+            }
+        });
+
+        document.getElementById('qaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selectedDocId = document.getElementById('documentSelect').value;
+            const question = document.getElementById('questionInput').value.trim();
+
+            if (!selectedDocId) {
+                showMessage('請先選擇一個文件。', 'error');
+                return;
+            }
+            if (!question) {
+                showMessage('請輸入您的問題。', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}qa/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: JSON.stringify({ document: selectedDocId, question: question }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '問題提交失敗');
+                }
+
+                const data = await response.json();
+                showMessage('問題已提交，正在生成答案...', 'info');
+                document.getElementById('questionInput').value = ''; // 清空問題輸入
+                // 立即刷新 QA 歷史，顯示新提交的問題為 "PENDING"
+                await fetchQAHitsory(selectedDocId);
+
+            } catch (error) {
+                console.error('Error submitting question:', error);
+                showMessage(`提交問題失敗: ${error.message}`, 'error');
+            }
+        });
+
+        // 刷新文件列表並可選中特定文件
+        async function refreshDocuments(selectDocId = null) {
+            const docs = await fetchDocuments();
+            if (selectDocId) {
+                document.getElementById('documentSelect').value = selectDocId;
+                await fetchDocumentDetails(selectDocId);
+                await fetchQAHitsory(selectDocId); // 載入新文件的 QA 歷史
+            } else {
+                 // 如果沒有指定選中文件，則選中目前選中的文件（如果有的話）
+                const currentSelected = document.getElementById('documentSelect').value;
+                if (currentSelected) {
+                    document.getElementById('documentSelect').value = currentSelected;
+                    await fetchDocumentDetails(currentSelected);
+                    await fetchQAHitsory(currentSelected);
+                }
+            }
+        }
+
+        // 初始化載入文件列表
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshDocuments();
+            // 每 5 秒刷新一次文件狀態和 QA 狀態
+            setInterval(() => {
+                const selectedDocId = document.getElementById('documentSelect').value;
+                if (selectedDocId) {
+                    fetchDocumentDetails(selectedDocId);
+                    fetchQAHitsory(selectedDocId);
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
