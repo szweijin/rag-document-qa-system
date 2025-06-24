@@ -1,4 +1,3 @@
-
 # 基於 RAG 架構的智慧文件問答系統
 
 -----
@@ -46,25 +45,22 @@
 
 ## 安裝與運行指南
 
-### 前置條件
+### 1\. 前置條件
 
-1.  **Python 3.9+**
-2.  **Redis 服務**：確保 Redis 服務器已啟動並運行 (用於 Celery)。
-3.  **Ollama**：
+  * **Python 3.9+**
+  * **Redis 服務**：確保 Redis 服務器已啟動並運行 (用於 Celery)。
+  * **Ollama**：
       * 安裝 [Ollama](https://ollama.com/)。
       * 下載並啟動您偏好的 LLM 模型，例如 `llama3.2`：在終端機運行 `ollama run llama3.2`。
 
-### 步驟
+### 2\. 環境準備與專案初始化
 
 1.  **克隆專案**：
-
     ```bash
     git clone [您的專案URL]
     cd [您的專案資料夾]
     ```
-
 2.  **建立並啟用虛擬環境**：
-
     ```bash
     python -m venv venv
     # macOS / Linux
@@ -72,21 +68,19 @@
     # Windows
     .\venv\Scripts\activate
     ```
-
 3.  **安裝 Python 套件**：
-
     ```bash
-    pip install Django djangorestframework celery pillow pypdf python-docx langchain langchain-community sentence-transformers chromadb
+    pip install -r requirements.txt
     ```
-
 4.  **執行資料庫遷移**：
-
     ```bash
     python manage.py makemigrations
     python manage.py migrate
     ```
 
-5.  **啟動 Django 開發伺服器**：
+### 3\. 運行服務
+
+1.  **啟動 Django 開發伺服器**：
     開啟**第一個終端機 (建議以管理員身份執行)**，確保在虛擬環境中，然後運行：
 
     ```bash
@@ -95,7 +89,7 @@
 
     訪問：`http://127.0.0.1:8000/`
 
-6.  **啟動 Celery Worker (單進程模式，推薦 Windows)**：
+2.  **啟動 Celery Worker (單進程模式，推薦 Windows)**：
     開啟**第二個終端機 (建議以管理員身份執行)**，確保在虛擬環境中，然後運行：
 
     ```bash
@@ -108,7 +102,7 @@
 
 ## DEMO 演示
 
-1.  **開啟瀏覽器**：訪問 `http://127.0.0.1:8000/`。
+1.  **開啟瀏覽器**：訪問 `http://127.00.1:8000/`。
 2.  **上傳文件**：在「文件上傳」區塊選擇您的 PDF/TXT/DOCX 文件並提交。
 3.  **觀察文件處理**：文件狀態將從「已上傳」變為「處理中」，最終變為「已完成」。您可點擊「刷新文件列表」更新狀態。
 4.  **提出問題**：文件狀態為「已完成」後，提問區塊將啟用。輸入關於文件內容的問題並提交。
@@ -125,10 +119,57 @@
 
 -----
 
-## 注意事項
+## 重要操作與注意事項
+
+### 生成 `requirements.txt`
+
+如果您已經完成了所有套件的安裝，可以透過以下命令生成 `requirements.txt` 文件。這份文件包含了專案運行所需的所有 Python 套件及其版本，方便他人重現您的開發環境。
+
+```bash
+pip freeze > requirements.txt
+```
+
+**請將此文件與您的程式碼一同提交到 Git 儲存庫。**
+
+### `.gitignore` 配置
+
+請確保您的專案根目錄下有 `.gitignore` 文件，並包含以下內容，以避免將不必要的檔案（如虛擬環境、資料庫文件、用戶上傳的媒體文件和 ChromaDB 數據）提交到 Git 儲存庫：
+
+```gitignore
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/ # 虛擬環境
+
+# Django
+*.log
+local_settings.py
+db.sqlite3 # SQLite 資料庫文件
+media/ # 用戶上傳的文件，不應版本控制
+
+# Celery / Redis
+celerybeat.pid
+celeryd.pid
+
+# AI / ChromaDB
+chroma_db/ # ChromaDB 持久化資料夾，非常重要，絕對不要上傳這個
+.env # 環境變量文件 (如果使用 dotenv 管理敏感信息)
+
+# IDEs
+.idea/ # PyCharm
+.vscode/ # VS Code
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+```
+
+### 其他注意事項
 
   * **本地 LLM 資源需求**：運行 LLM 需要足夠的 CPU/RAM 資源，對於大型模型可能需要 GPU 支持。
-  * **ChromaDB 持久化**：`chroma_db/` 資料夾會自動在專案根目錄生成，用於儲存向量資料。部署時請將其添加到 `.gitignore`。
   * **文件編碼**：對於 TXT 文件，請確保使用 UTF-8 編碼以避免讀取錯誤。
 
 -----
@@ -141,3 +182,4 @@
   * **使用者管理**：導入用戶認證與文件權限控制。
   * **前端框架升級**：採用 React/Vue/Angular 等現代前端框架，提供更豐富的用戶體驗。
 
+-----
