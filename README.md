@@ -39,7 +39,7 @@
 
 
 ## 實際操作
-[DEMO.mp4](image/DEMO.mp4)
+[![RAG 架構的智慧文件問答系統 DEMO 影片](image/img_video_first.png)](https://youtu.be/yaO8B5bbDc8?si=TG0dPWaXVtne90Ho "RAG 架構的智慧文件問答系統 DEMO 影片")
 
 ## 安裝與運行指南
 
@@ -247,7 +247,7 @@ python manage.py migrate
 
 ### 3\. 運行服務
 
-現在，所有準備工作已就緒，可以啟動 Django 伺服器和 Celery Worker 了。
+現在，所有準備工作已就緒，可以啟動 Django 伺服器和 Celery Worker
 
 #### 3.1 啟動 Django 開發伺服器
 
@@ -293,11 +293,9 @@ celery -A rag_qa_project worker -l info --pool=solo
 
 -----
 
-## DEMO 
+## DEMO 實作
 
-現在您可以體驗智慧文件問答系統了！
-
-1.  **開啟瀏覽器**：確保您正在訪問 `http://127.0.0.1:8000/`。
+1.  **開啟瀏覽器**：確保您正在訪問 `http://127.0.0.1:8000/`
 
 2.  **上傳文件**：
 
