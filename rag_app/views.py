@@ -3,8 +3,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Document, QuestionAnswer
 from .serializers import DocumentSerializer, QuestionAnswerSerializer
-from .tasks import parse_and_vectorize_document_task, answer_question_with_rag_task
-from django.shortcuts import render # 用於前端頁面
+from .tasks import parse_and_vectorize_document_task, answer_question_with_rag_task, delete_document_data_task, delete_qa_record_task
+from django.shortcuts import render
+from django.db import transaction
+import os # 引入 os 模組
 
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all().order_by('-uploaded_at')
@@ -16,11 +18,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
 
-        # 啟動 Celery 任務來處理文件
         document_id = serializer.instance.id
-        parse_and_vectorize_document_task.delay(str(document_id)) # 使用 .delay 觸發非同步任務
+        parse_and_vectorize_document_task.delay(str(document_id))
 
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def destroy(self, request, *args, **kwargs):
+        # 覆寫 destroy 方法，以便在 Celery 中處理刪除邏輯
+        instance = self.get_object()
+        document_id = str(instance.id)
+        file_path = instance.file.path # 獲取文件路徑
+
+        # 啟動 Celery 任務來異步處理刪除操作
+        delete_document_data_task.delay(document_id, file_path)
+
+        # 立即返回成功響應，但實際刪除操作在後台執行
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class QuestionAnswerViewSet(viewsets.ModelViewSet):
     queryset = QuestionAnswer.objects.all().order_by('-created_at')
@@ -43,7 +57,6 @@ class QuestionAnswerViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Document not found."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        # 創建 QA 實例並設置為 PENDING
         qa_instance = QuestionAnswer.objects.create(
             document=document,
             question=question,
@@ -51,10 +64,18 @@ class QuestionAnswerViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(qa_instance)
 
-        # 啟動 Celery 任務來回答問題
         answer_question_with_rag_task.delay(str(qa_instance.id), str(document_id), question)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    # 針對 QuestionAnswer 實例的刪除
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        qa_id = str(instance.id)
+        delete_qa_record_task.delay(qa_id) # 異步刪除 QA 記錄
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 def index_view(request):
     return render(request, 'rag_app/index.html')
