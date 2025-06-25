@@ -54,7 +54,7 @@
 
 確保您的系統已安裝 **Python 3.9+**。您可以從 [Python 官網](https://www.python.org/downloads/) 下載並安裝。
 
-![img.png](img.png)
+![img.png](image/img.png)
 
 #### 1.2 安裝並啟動 Redis 服務
 
@@ -63,9 +63,9 @@ Redis 將作為 Celery 的 Broker (訊息代理) 和 Backend (結果儲存)。
   * **Windows**：
       1. 至 [redis官方github](https://github.com/MicrosoftArchive/redis/releases)
       2. 選擇 `.msi` 檔下載
-      ![img_1.png](img_1.png)
+      ![img_1.png](image/img_1.png)
       3. Redis 內的資料是存在記憶體，如果不注意可能會佔用太多空間，所以在安裝時建議設置記憶體上限
-      ![img_2.png](img_2.png)
+      ![img_2.png](image/img_2.png)
 ---
   * **macOS (使用 Homebrew)**：
 
@@ -98,7 +98,7 @@ Redis 將作為 Celery 的 Broker (訊息代理) 和 Backend (結果儲存)。
      ping
      ```
 
-    ![img_3.png](img_3.png)
+    ![img_3.png](image/img_3.png)
 
 #### 1.3 安裝並啟動 Ollama
 
@@ -107,8 +107,8 @@ Ollama 是一個輕量級的框架，用於在本地運行大型語言模型。
 1.  **下載並安裝 Ollama**：
     前往 [Ollama 官網](https://ollama.com/download) 下載適用於您作業系統的安裝程式並進行安裝。
 
-    ![img_5.png](img_5.png)
-    ![img_6.png](img_6.png)
+    ![img_5.png](image/img_5.png)
+    ![img_6.png](image/img_6.png)
 
 2.  **下載 Llama 3.2 模型**：
     開啟一個新的終端機 (或 PowerShell)，運行以下命令下載 Llama 3.2 模型 (如果模型名稱不同，請替換)：
@@ -128,7 +128,7 @@ Ollama 是一個輕量級的框架，用於在本地運行大型語言模型。
     ```bash
     ollama list
     ```
-    ![img_7.png](img_7.png)
+    ![img_7.png](image/img_7.png)
 
 ### 2\. 專案環境設定
 
