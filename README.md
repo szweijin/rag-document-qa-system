@@ -1,12 +1,9 @@
 # 基於 RAG 架構的智慧文件問答系統
 
------
-
 ## 專案簡介
 
 這個專案旨在打造一個智能問答系統，其核心是 **Retrieval-Augmented Generation (RAG)** 架構。它讓使用者能夠上傳 PDF、TXT、DOCX 等文件，系統會自動處理這些文件，並透過本地部署的大型語言模型 (LLM) 回答與文件內容相關的問題。
 
------
 
 ## 解決的問題
 
@@ -14,7 +11,6 @@
   * **減少 LLM「幻覺」**：透過從特定文件中檢索內容，確保 LLM 的回答有事實依據，避免產生不真實的資訊。
   * **擴展 LLM 知識邊界**：彌補 LLM 訓練數據的局限性，使其能運用最新或專有領域的文件知識進行問答。
 
------
 
 ## 技術棧
 
@@ -29,7 +25,6 @@
       * `ollama`: 本地運行 LLM (例如 Llama 3.2)
   * **前端**：HTML/JavaScript (Django Template)
 
------
 
 ## 核心功能
 
@@ -42,7 +37,6 @@
   * **問答歷史管理**：保存每次提問與回答的記錄，並顯示答案的參考來源。
   * **文件及對話記錄刪除**：提供介面刪除已上傳的文件及其所有相關對話紀錄，或單獨刪除某條對話紀錄。
 
------
 
 ## 安裝與運行指南
 
@@ -66,14 +60,14 @@ Redis 將作為 Celery 的 Broker (訊息代理) 和 Backend (結果儲存)。
       ![img_1.png](image/img_1.png)
       3. Redis 內的資料是存在記憶體，如果不注意可能會佔用太多空間，所以在安裝時建議設置記憶體上限
       ![img_2.png](image/img_2.png)
----
+
   * **macOS (使用 Homebrew)**：
 
     ```bash
     brew install redis
     brew services start redis # 啟動服務
     ```
----
+
   * **Linux (以 Debian/Ubuntu 為例)**：
 
     ```bash
@@ -82,7 +76,7 @@ Redis 將作為 Celery 的 Broker (訊息代理) 和 Backend (結果儲存)。
     sudo systemctl enable redis-server # 設定開機自啟動
     sudo systemctl start redis-server  # 啟動服務
     ```
----
+
 
 * 測試安裝
 1. 第一次啟用: 打開命令字元，輸入
@@ -141,7 +135,7 @@ git clone https://github.com/szweijin/rag-document-qa-system.git
 cd rag-document-qa-system
 ```
 
-[貼圖：`git clone` 執行截圖]
+![img.png](image/git01.png)
 
 #### 2.2 建立並啟用虛擬環境
 
@@ -166,38 +160,31 @@ cd rag-document-qa-system
 
     啟用成功後，您的終端機提示符前會顯示 `(venv)` 字樣。
 
-[貼圖：建立及啟用虛擬環境截圖]
+    ![img.png](image/img_8.png)
+    ![img.png](image/img_9.png)
 
 #### 2.3 生成並安裝 Python 套件
 
 為了讓其他開發者或您自己在不同環境下也能輕鬆部署，我們需要一個 `requirements.txt` 文件。
 
 1.  **安裝專案所需的所有 Python 套件**：
-    如果您是首次設定，請手動安裝所有必要的套件。
-
+    使用 `requirements.txt`
     ```bash
-    pip install Django djangorestframework celery pillow pypdf python-docx langchain langchain-community sentence-transformers chromadb
+    pip install -r requirements.txt
     ```
-
     **注意**：`langchain` 的版本更新頻繁，可能會導致兼容性問題。如果遇到錯誤，可以嘗試鎖定版本，例如 `langchain==0.1.0`。
 
-    [貼圖：`pip install` 執行截圖]
+   * **執行時在這段會停留較久，因下載的套件較多，請耐心等待**
+       ![img.png](image/img_10.png)
 
-2.  **生成 `requirements.txt` 文件**：
+2.  **如果後續有改動，記得重新生成 `requirements.txt`**：
     在虛擬環境中，執行以下命令。這會將您環境中安裝的所有套件及其精確版本寫入到 `requirements.txt` 中。
-
     ```bash
     pip freeze > requirements.txt
     ```
+   * **請將此文件與您的程式碼一同提交到 Git 儲存庫。**
 
-    **請將此文件與您的程式碼一同提交到 Git 儲存庫。**
-
-    [貼圖：`pip freeze > requirements.txt` 執行截圖]
-
-3.  **供後續使用 (`pip install -r requirements.txt`)**：
-    之後，其他用戶只需在啟用虛擬環境後運行 `pip install -r requirements.txt` 即可安裝所有依賴。
-
-#### 2.4 配置 `.gitignore`
+#### 2.4 配置 `.gitignore` (如果有更動內容要確認是否上傳github) 
 
 `.gitignore` 文件用於指定 Git 應忽略的文件或目錄，不將它們納入版本控制。這對於虛擬環境、資料庫文件、用戶上傳的媒體文件和 AI 模型數據等非常重要。
 
@@ -212,26 +199,26 @@ cd rag-document-qa-system
     *.egg-info/
     .pytest_cache/
     .venv/
-    venv/ # 虛擬環境
-
+    venv/
+    
     # Django
     *.log
     local_settings.py
-    db.sqlite3 # SQLite 資料庫文件
-    media/ # 用戶上傳的文件，不應版本控制
-
+    db.sqlite3
+    media/
+    
     # Celery / Redis
     celerybeat.pid
     celeryd.pid
-
+    
     # AI / ChromaDB
-    chroma_db/ # ChromaDB 持久化資料夾，非常重要，絕對不要上傳這個
-    .env # 環境變量文件 (如果使用 dotenv 管理敏感信息)
-
+    chroma_db/
+    .env
+    
     # IDEs
-    .idea/ # PyCharm
-    .vscode/ # VS Code
-
+    .idea/
+    .vscode/
+    
     # Operating System Files
     .DS_Store
     Thumbs.db
@@ -239,7 +226,6 @@ cd rag-document-qa-system
 
 3.  **保存 `.gitignore` 文件**。
 
-[貼圖：`.gitignore` 文件內容及位於專案根目錄的截圖]
 
 #### 2.5 執行資料庫遷移
 
@@ -249,8 +235,12 @@ cd rag-document-qa-system
 python manage.py makemigrations
 python manage.py migrate
 ```
+* `python manage.py makemigrations` 會生成 `db.sqlite3`
 
-[貼圖：`makemigrations` 和 `migrate` 執行截圖]
+![img.png](image/img_11.png)
+* `python manage.py migrate` 執行成功會出現 `Applying ... ok`
+
+![img_1.png](image/img_12.png)
 
 ### 3\. 運行服務
 
@@ -272,12 +262,12 @@ python manage.py migrate
 
     您將看到類似 `Starting development server at http://127.0.0.1:8000/` 的輸出。
 
-    [貼圖：`python manage.py runserver` 執行截圖]
+    ![img.png](image/img_13.png)
 
 4.  **訪問前端介面**：
-    在您的瀏覽器中打開 `http://127.0.0.1:8000/`。
+    在您的瀏覽器中打開 `http://127.0.0.1:8000/`
 
-    [貼圖：瀏覽器中打開的應用程式首頁截圖]
+    ![img_1.png](image/img_14.png)
 
 #### 3.2 啟動 Celery Worker
 
@@ -289,18 +279,18 @@ Celery Worker 負責處理所有耗時的後台任務，例如文件解析、向
 
 3.  **啟動 Celery Worker**：
 
-    ```bash
-    celery -A rag_qa_project worker -l info --pool=solo
-    ```
+記得新開的命令字元要先 `cd rag-document-qa-system` 跟 `.\venv\Scripts\activate`啟動虛擬環境
+```bash
+celery -A rag_qa_project worker -l info --pool=solo
+```
+  * **`--pool=solo` 參數非常重要**，尤其是在 Windows 環境下。它會強制 Celery Worker 以單進程模式運行，避免多進程導致的文件鎖定（`PermissionError`）問題，特別是當 ChromaDB (內部使用 SQLite) 進行持久化操作時。
+  * 您將看到 Celery Worker 的啟動訊息。
 
-      * **`--pool=solo` 參數非常重要**，尤其是在 Windows 環境下。它會強制 Celery Worker 以單進程模式運行，避免多進程導致的文件鎖定（`PermissionError`）問題，特別是當 ChromaDB (內部使用 SQLite) 進行持久化操作時。
-      * 您將看到 Celery Worker 的啟動訊息。
-
-    [貼圖：`celery -A rag_qa_project worker -l info --pool=solo` 執行截圖]
+  ![img_2.png](image/img_15.png)
 
 -----
 
-## DEMO 演示
+## DEMO 
 
 現在您可以體驗智慧文件問答系統了！
 
@@ -312,7 +302,8 @@ Celery Worker 負責處理所有耗時的後台任務，例如文件解析、向
       * 選擇一個 PDF、TXT 或 DOCX 文件。
       * 點擊「上傳文件」按鈕。
 
-    [貼圖：文件上傳界面截圖]
+    ![img_3.png](image/img_16.png)
+    ![img_4.png](image/img_17.png)
 
 3.  **觀察文件處理進度**：
 
@@ -320,41 +311,41 @@ Celery Worker 負責處理所有耗時的後台任務，例如文件解析、向
       * 文件狀態將從「已上傳」變為「處理中」，最終變為「已完成」。
       * 您也可以點擊「刷新文件列表」按鈕手動更新狀態，或等待每 5 秒的自動刷新。
       * 在 Celery Worker 的終端機中，您會看到文件解析、分塊、嵌入和向量化過程的詳細日誌。
-
-    [貼圖：文件處理狀態（例如從處理中到已完成）的截圖]
-    [貼圖：Celery Worker 處理文件日誌的截圖]
+    
+    * **前端畫面**
+    ![img_6.png](image/img_19.png)
+    
+    * **Celery Worker 處理文件日誌**
+    ![img_5.png](image/img_18.png)
 
 4.  **提出問題**：
 
       * 當選定的文件狀態為「已完成」時，下方的「提出問題」文本框將被啟用。
       * 在文本框中輸入一個與您上傳文件內容相關的問題。
       * 點擊「提問」按鈕。
-
-    [貼圖：提問界面截圖]
+![img_8.png](image/img_21.png)
 
 5.  **查看答案與參考來源**：
 
       * 問題提交後，會顯示在「問答歷史」區塊。初始狀態可能顯示為「待處理」或「回答中」。
       * 在 Celery Worker 終端機中，您會看到 LLM 檢索和生成答案的日誌。
       * 等待幾秒後，答案和相關的參考來源（標註文件名和頁碼）會自動顯示在問答歷史中。
-
-    [貼圖：問答結果及參考來源顯示截圖]
+      * 注意：這裡DEMO回應還很陽春，需要多筆資料訓練，回應語言也需要特別給出指示
+    ![img_9.png](image/img_22.png)
 
 6.  **刪除文件**：
 
       * 在「已處理文件」區塊，從下拉選單中選擇一個文件。
       * 點擊「刪除選取文件」按鈕，並確認彈窗提示。
       * 該文件及其所有相關的對話紀錄、ChromaDB 向量索引和物理文件都將被刪除。文件列表會自動刷新。
-
-    [貼圖：刪除文件按鈕及確認彈窗截圖]
+   ![img_11.png](image/img_24.png)
 
 7.  **刪除單條對話紀錄**：
 
       * 在「問答歷史」區塊，每條對話紀錄下方都有一個「刪除此對話」按鈕。
       * 點擊此按鈕並確認彈窗提示。
       * 該條對話紀錄將被刪除，問答歷史會自動刷新。
-
-    [貼圖：刪除單條對話紀錄按鈕及確認彈窗截圖]
+    ![img_10.png](image/img_23.png)
 
 -----
 
